@@ -1,7 +1,7 @@
 NAME = pipex
 
 CC = cc 
-FLAGS = -Wall -Wextra -Werror
+FLAGS = -g -Wall -Wextra -Werror
 
 SRC = pipex.c 
 
@@ -29,5 +29,11 @@ fclean: clean
 
 re: fclean all
 	make re -C libft
+
+val:
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes \
+	./pipex "file1" "grep -o v" "wc -l" "file2"
+#"$${cmd2}" @read -p "Enter cmd: " cmd; \
+	read -p "Enter cmd2: " cmd2; \
 
 .PHONY: all clean fclean re
