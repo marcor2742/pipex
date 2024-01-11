@@ -6,7 +6,7 @@
 /*   By: mruggier <mruggier@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/01/05 15:07:15 by mruggier          #+#    #+#             */
-/*   Updated: 2024/01/11 16:20:36 by mruggier         ###   ########.fr       */
+/*   Updated: 2024/01/11 18:39:52 by mruggier         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -175,27 +175,80 @@ void	ft_parent(t_data *data, int i)
 	close(data->fd[1]);
 }
 
+void	heredoc(t_data *data)
+{
+	(void)data;
+	pid_t	pod;  //riscrivere gli errori, 12345 sono gia qualcosa 
+	int fd[2];
+	char *line;
+	
+	if (pipe(fd) == -1)
+		perror_child(1);
+	pod = fork();
+	if (pod == -1)
+		perror_child(2);
+	if (pod == 0) //read
+	{
+		close(fd[0]);
+		if (dup2(fd[1], STDOUT_FILENO) == -1)
+			perror_child(3);
+		line = get_next_line(STDIN_FILENO);
+		while (line)
+		{
+			write(fd[1], line, ft_strlen(line));
+			write(fd[1], "\n", 1);
+			free(line);
+			line = get_next_line(STDIN_FILENO);
+		}
+	}
+	else
+	{
+		close(fd[1]);
+		if (dup2(fd[0], STDIN_FILENO) == -1)
+			perror_child(5);
+		waitpid(pod , NULL, 0);
+	}
+}
+
 int	main(int argc, char **argv)
 {
 	t_data	data;
 	int		i;
 
-	check_file(argc, argv);
-	data.filein = open(argv[1], O_RDONLY);
-	data.fileout = open(argv[argc - 1], O_WRONLY | O_CREAT | O_TRUNC, 0777); // append per altro coso
-	if (data.filein < 0 || data.fileout < 0)
+	if (ft_strcmp(argv[1], "here_doc") == 0)
 	{
-		perror("open");
-		free_end(argc, &data);
-		return (1);
+		if (argc < 6)
+		{
+			perror("argc too few arguments heredoc"); //free
+			return (1);
+		}
+		data.fileout = open(argv[argc - 1], O_WRONLY | O_CREAT | O_APPEND, 0777);
+		heredoc(&data);
+	}
+	else
+	{
+		if (argc < 5)
+		{
+			perror("argc too few arguments pipex"); //free
+			return (1);
+		}
+		check_file(argc, argv);
+		data.filein = open(argv[1], O_RDONLY);
+		data.fileout = open(argv[argc - 1], O_WRONLY | O_CREAT | O_TRUNC, 0777);
+		if (data.filein < 0 || data.fileout < 0)
+		{
+			perror("open");
+			free_end(argc, &data);
+			return (1);
+		}
+		if (dup2(data.filein, STDIN_FILENO) == -1)
+		{
+			perror("dup2 stdin");
+			exit (1);
+		}
 	}
 	matrix_cmd(argc, argv, &data);
 	path_execve(argc, &data);
-	if (dup2(data.filein, STDIN_FILENO) == -1)
-	{
-		perror("dup2 stdin");
-		exit (1);
-	}
 	i = 0;
 	while (i < argc - 4)
 	{
