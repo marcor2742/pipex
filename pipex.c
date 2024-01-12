@@ -6,7 +6,7 @@
 /*   By: mruggier <mruggier@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/01/05 15:07:15 by mruggier          #+#    #+#             */
-/*   Updated: 2024/01/11 18:39:52 by mruggier         ###   ########.fr       */
+/*   Updated: 2024/01/12 18:47:54 by mruggier         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,23 +40,15 @@ void matrix_cmd(int argc, char **argv, t_data *data)
 		i++;
 	}
 	data->cmd[i] = NULL;
-	
-	i = 0;
-	data->pid = malloc(sizeof(pid_t) * (argc - 2));
-	if (!data->pid)
-	{
-		perror("malloc pid");
-		exit(1);
-	}
 }
 
-void	free_end(int argc, t_data *data)
+void	free_end(t_data *data)
 {
-	int i;
-	int j;
+	int	i;
+	int	j;
 
 	i = 0;
-	while (i < argc - 3)
+	while (i < data->argc - 3)
 	{
 		j = 0;
 		while (data->cmd[i][j])
@@ -69,7 +61,7 @@ void	free_end(int argc, t_data *data)
 	}
 	free(data->cmd);
 	i = 0;
-	while (i < argc - 3)
+	while (i < data->argc - 3)
 	{
 		free(data->path[i]);
 		i++;
@@ -114,99 +106,99 @@ void	path_execve(int argc, t_data *data)
 	data->path[i] = NULL;
 }
 
-void	perror_child(int i)
+void	perror_child(int i, t_data *data)
 {
 	if (i == 1)
 		perror("pipe");
 	else if (i == 2)
 		perror("fork");
-	else if (i == 3)
-		perror("dup2 stdout child");
-	else if (i == 4)
-		perror("execve child");
-	else if (i == 5)
+	else if (i == 3 || i == 13)
+		perror("dup2 stdout");
+	else if (i == 4 || i == 14)
+		perror("execve");
+	else if (i == 5 || i == 8 || i == 12)
 		perror("dup2 stdin child");
+	else if (i == 6)
+		perror("pipe heredoc");
+	else if (i == 7)
+		perror("fork heredoc");
+	else if (i == 9)
+		perror("argc too few arguments heredoc");
+	else if (i == 10)
+		perror("argc too few arguments pipex");
+	else if (i == 11)
+		perror("open file");
+	free_end(data);
 	exit (1);
 }
 
 void	ft_child(t_data *data, int i)
 {
 	pid_t	pid;
-	int fd[2];
-	
+	int		fd[2];
+
 	if (pipe(fd) == -1)
-		perror_child(1);
+		perror_child(1, data);
 	pid = fork();
 	if (pid == -1)
-		perror_child(2);
+		perror_child(2, data);
 	if (pid == 0)
 	{
 		close(fd[0]);
 		if (dup2(fd[1], STDOUT_FILENO) == -1)
-			perror_child(3);
+			perror_child(3, data);
 		if (execve(data->path[i], data->cmd[i], NULL) < 0)
-			perror_child(4);
+			perror_child(4, data);
 	}
 	else
 	{
 		close(fd[1]);
 		if (dup2(fd[0], STDIN_FILENO) == -1)
-			perror_child(5);
+			perror_child(5, data);
 		waitpid(pid , NULL, 0);
 	}
 }
 
 void	ft_parent(t_data *data, int i)
 {
-		if (dup2(data->fileout, STDOUT_FILENO) == -1)
-		{
-			perror("dup2 dad");
-			exit (1);
-		}
-		if (execve(data->path[i], data->cmd[i], NULL) < 0)
-		{
-			perror("execve dad");
-			exit (1);
-		}
+	int	fd[2];
 
+	if (dup2(data->fileout, STDOUT_FILENO) == -1)
+		perror_child(13, data);
+	if (execve(data->path[i], data->cmd[i], NULL) < 0)
+		perror_child(14, data);
 	close(data->filein);
 	close(data->fileout);
-	close(data->fd[0]);
-	close(data->fd[1]);
+	close(fd[0]);
+	close(fd[1]);
 }
 
 void	heredoc(t_data *data)
 {
-	(void)data;
-	pid_t	pod;  //riscrivere gli errori, 12345 sono gia qualcosa 
-	int fd[2];
-	char *line;
-	
-	if (pipe(fd) == -1)
-		perror_child(1);
-	pod = fork();
-	if (pod == -1)
-		perror_child(2);
-	if (pod == 0) //read
+	if (pipe(data->fd) == -1)
+		perror_child(6, data);
+	data->pod = fork();
+	if (data->pod == -1)
+		perror_child(7, data);
+	if (data->pod == 0)
 	{
-		close(fd[0]);
-		if (dup2(fd[1], STDOUT_FILENO) == -1)
-			perror_child(3);
-		line = get_next_line(STDIN_FILENO);
-		while (line)
+		close(data->fd[0]);
+		while (1)
 		{
-			write(fd[1], line, ft_strlen(line));
-			write(fd[1], "\n", 1);
-			free(line);
-			line = get_next_line(STDIN_FILENO);
+			data->line = get_next_line(STDIN_FILENO);
+			if (ft_strncmp(data->line, data->argv[2],
+				ft_strlen(data->argv[2])) == 0)
+				exit (1);
+			write(data->fd[1], data->line, ft_strlen(data->line));
+			free(data->line);
 		}
 	}
 	else
 	{
-		close(fd[1]);
-		if (dup2(fd[0], STDIN_FILENO) == -1)
-			perror_child(5);
-		waitpid(pod , NULL, 0);
+		close(data->fd[1]);
+		if (dup2(data->fd[0], STDIN_FILENO) == -1)
+			perror_child(8, data);
+		waitpid(data->pod , NULL, 0);
 	}
 }
 
@@ -215,46 +207,39 @@ int	main(int argc, char **argv)
 	t_data	data;
 	int		i;
 
+	data.argc = argc;
+	data.argv = argv;
 	if (ft_strcmp(argv[1], "here_doc") == 0)
 	{
+		i = 1;
 		if (argc < 6)
-		{
-			perror("argc too few arguments heredoc"); //free
-			return (1);
-		}
+			perror_child(9, &data);
 		data.fileout = open(argv[argc - 1], O_WRONLY | O_CREAT | O_APPEND, 0777);
+		if (data.fileout < 0)
+			perror_child(11, &data);
 		heredoc(&data);
 	}
 	else
 	{
+		i = 0;
 		if (argc < 5)
-		{
-			perror("argc too few arguments pipex"); //free
-			return (1);
-		}
+			perror_child(10, &data);
 		check_file(argc, argv);
 		data.filein = open(argv[1], O_RDONLY);
 		data.fileout = open(argv[argc - 1], O_WRONLY | O_CREAT | O_TRUNC, 0777);
 		if (data.filein < 0 || data.fileout < 0)
-		{
-			perror("open");
-			free_end(argc, &data);
-			return (1);
-		}
+			perror_child(11, &data);
 		if (dup2(data.filein, STDIN_FILENO) == -1)
-		{
-			perror("dup2 stdin");
-			exit (1);
-		}
+			perror_child(12, &data);
 	}
-	matrix_cmd(argc, argv, &data);
-	path_execve(argc, &data);
-	i = 0;
-	while (i < argc - 4)
+	matrix_cmd(argc + i, argv + i, &data);
+	path_execve(argc - i, &data);
+	int j = 0;
+	while (j < argc - i - 4)
 	{
-		ft_child(&data, i++);
+		ft_child(&data, j);
+		j++;
 	}
-	ft_parent(&data, i);
-	
-	free_end(argc, &data);
+	ft_parent(&data, j);
+	free_end(&data);
 }

@@ -6,7 +6,7 @@
 /*   By: mruggier <mruggier@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/01/05 16:01:14 by mruggier          #+#    #+#             */
-/*   Updated: 2024/01/11 15:49:52 by mruggier         ###   ########.fr       */
+/*   Updated: 2024/01/12 18:45:03 by mruggier         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,13 +24,15 @@
 
 typedef struct s_data
 {
-
+	int		argc;
+	char	**argv;
 	int		filein;
 	int		fileout;
 	int		fd[2];
 	char	***cmd;
 	char	**path;
-	pid_t	*pid;
+	char	*line;
+	pid_t	pod;
 }				t_data;
 
 #endif
