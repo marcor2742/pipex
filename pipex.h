@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   pipex.h                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mruggier <mruggier@student.42.fr>          +#+  +:+       +#+        */
+/*   By: marvin <marvin@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/01/05 16:01:14 by mruggier          #+#    #+#             */
-/*   Updated: 2024/01/12 18:45:03 by mruggier         ###   ########.fr       */
+/*   Updated: 2024/01/14 22:42:13 by marvin           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,6 @@
 # include <stdlib.h>
 # include <stdio.h>
 
-
 typedef struct s_data
 {
 	int		argc;
@@ -32,6 +31,8 @@ typedef struct s_data
 	char	***cmd;
 	char	**path;
 	char	*line;
+	char	**all_paths; // da freeare
+	char	*possible_path; // da freeare
 	pid_t	pod;
 }				t_data;
 

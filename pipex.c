@@ -3,16 +3,16 @@
 /*                                                        :::      ::::::::   */
 /*   pipex.c                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mruggier <mruggier@student.42.fr>          +#+  +:+       +#+        */
+/*   By: marvin <marvin@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/01/05 15:07:15 by mruggier          #+#    #+#             */
-/*   Updated: 2024/01/12 18:47:54 by mruggier         ###   ########.fr       */
+/*   Updated: 2024/01/14 23:25:18 by marvin           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "pipex.h"
 
-void check_file(int argc, char **argv)
+void	check_file(int argc, char **argv)
 {
 	(void)argc;
 	if (access(argv[1], F_OK | R_OK) == -1)
@@ -20,12 +20,11 @@ void check_file(int argc, char **argv)
 		perror("access file1");
 		exit(1);
 	}
-
 }
 
-void matrix_cmd(int argc, char **argv, t_data *data)
+void	matrix_cmd(int argc, char **argv, t_data *data)
 {
-	int i;
+	int	i;
 
 	i = 0;
 	data->cmd = malloc(sizeof(char **) * (argc - 2));
@@ -42,7 +41,20 @@ void matrix_cmd(int argc, char **argv, t_data *data)
 	data->cmd[i] = NULL;
 }
 
-void	free_end(t_data *data)
+void	free_all_possible_path(t_data *data)
+{
+	int	i;
+
+	i = 0;
+	while (data->all_paths[i])
+	{
+		free(data->all_paths[i]);
+		i++;
+	}
+	free(data->all_paths);
+}
+
+void	free_cmd_path(t_data *data)
 {
 	int	i;
 	int	j;
@@ -69,10 +81,10 @@ void	free_end(t_data *data)
 	free(data->path);
 }
 
-void print_matrix(int argc, t_data *data)
+void	print_matrix(int argc, t_data *data)
 {
-	int i;
-	int j;
+	int	i;
+	int	j;
 
 	i = 0;
 	while (i < argc - 3)
@@ -85,25 +97,6 @@ void print_matrix(int argc, t_data *data)
 		}
 		i++;
 	}
-}
-
-void	path_execve(int argc, t_data *data)
-{
-	int i;
-
-	i = 0;
-	data->path = malloc(sizeof(char *) * (argc - 2));
-	if (!data->path)
-	{
-		perror("malloc path");
-		exit(1);
-	}
-	while (i < argc - 3)
-	{
-		data->path[i] = ft_strjoin("/bin/", data->cmd[i][0]);
-		i++;
-	}
-	data->path[i] = NULL;
 }
 
 void	perror_child(int i, t_data *data)
@@ -122,14 +115,40 @@ void	perror_child(int i, t_data *data)
 		perror("pipe heredoc");
 	else if (i == 7)
 		perror("fork heredoc");
-	else if (i == 9)
-		perror("argc too few arguments heredoc");
-	else if (i == 10)
-		perror("argc too few arguments pipex");
+	else if (i == 9 || i == 10)
+		perror("argc too few arguments");
 	else if (i == 11)
 		perror("open file");
-	free_end(data);
+	else if (i == 15)
+		perror("malloc path");
+	free_cmd_path(data);
 	exit (1);
+}
+
+void	path_execve(int argc, t_data *data, char **envp)
+{
+	int		i;
+	int		j;
+
+	i = 0;
+	while (ft_strnstr(envp[i], "PATH=", 5) == 0)
+		i++;
+	data->all_paths = ft_split(envp[i] + 5, ':');
+	i = 0;
+	j = 0;
+	while (j < argc - 3 && data->all_paths[i] != NULL)
+	{
+		data->possible_path = ft_strjoin(data->all_paths[i],
+				ft_strjoin("/", data->cmd[j][0]));
+		if (access(data->possible_path, F_OK) == 0)
+		{
+			data->path[j++] = data->possible_path;
+			i = 0;
+		}
+		else
+			i++;
+	}
+	data->path[j] = NULL;
 }
 
 void	ft_child(t_data *data, int i)
@@ -155,13 +174,13 @@ void	ft_child(t_data *data, int i)
 		close(fd[1]);
 		if (dup2(fd[0], STDIN_FILENO) == -1)
 			perror_child(5, data);
-		waitpid(pid , NULL, 0);
+		waitpid(pid, NULL, 0);
 	}
 }
 
 void	ft_parent(t_data *data, int i)
 {
-	int	fd[2];
+	//int	fd[2];
 
 	if (dup2(data->fileout, STDOUT_FILENO) == -1)
 		perror_child(13, data);
@@ -169,8 +188,8 @@ void	ft_parent(t_data *data, int i)
 		perror_child(14, data);
 	close(data->filein);
 	close(data->fileout);
-	close(fd[0]);
-	close(fd[1]);
+	//close(fd[0]);
+	//close(fd[1]);
 }
 
 void	heredoc(t_data *data)
@@ -187,7 +206,7 @@ void	heredoc(t_data *data)
 		{
 			data->line = get_next_line(STDIN_FILENO);
 			if (ft_strncmp(data->line, data->argv[2],
-				ft_strlen(data->argv[2])) == 0)
+					ft_strlen(data->argv[2])) == 0)
 				exit (1);
 			write(data->fd[1], data->line, ft_strlen(data->line));
 			free(data->line);
@@ -198,48 +217,61 @@ void	heredoc(t_data *data)
 		close(data->fd[1]);
 		if (dup2(data->fd[0], STDIN_FILENO) == -1)
 			perror_child(8, data);
-		waitpid(data->pod , NULL, 0);
+		waitpid(data->pod, NULL, 0);
 	}
 }
 
-int	main(int argc, char **argv)
+int	dup_and_files(t_data *data)
 {
-	t_data	data;
-	int		i;
-
-	data.argc = argc;
-	data.argv = argv;
-	if (ft_strcmp(argv[1], "here_doc") == 0)
+	if (ft_strcmp(data->argv[1], "here_doc") == 0)
 	{
-		i = 1;
-		if (argc < 6)
-			perror_child(9, &data);
-		data.fileout = open(argv[argc - 1], O_WRONLY | O_CREAT | O_APPEND, 0777);
-		if (data.fileout < 0)
-			perror_child(11, &data);
-		heredoc(&data);
+		if (data->argc < 6)
+			perror_child(9, data);
+		data->fileout = open(data->argv[data->argc - 1],
+				O_WRONLY | O_CREAT | O_APPEND, 0777);
+		if (data->fileout < 0)
+			perror_child(11, data);
+		heredoc(data);
+		return (1);
 	}
 	else
 	{
-		i = 0;
-		if (argc < 5)
-			perror_child(10, &data);
-		check_file(argc, argv);
-		data.filein = open(argv[1], O_RDONLY);
-		data.fileout = open(argv[argc - 1], O_WRONLY | O_CREAT | O_TRUNC, 0777);
-		if (data.filein < 0 || data.fileout < 0)
-			perror_child(11, &data);
-		if (dup2(data.filein, STDIN_FILENO) == -1)
-			perror_child(12, &data);
+		if (data->argc < 5)
+			perror_child(10, data);
+		check_file(data->argc, data->argv);
+		data->filein = open(data->argv[1], O_RDONLY);
+		data->fileout = open(data->argv[data->argc - 1],
+				O_WRONLY | O_CREAT | O_TRUNC, 0777);
+		if (data->filein < 0 || data->fileout < 0)
+			perror_child(11, data);
+		if (dup2(data->filein, STDIN_FILENO) == -1)
+			perror_child(12, data);
+		return (0);
 	}
+}
+
+int	main(int argc, char **argv, char **envp)
+{
+	t_data	data;
+	int		i;
+	int		j;
+
+	if (argc < 5)
+		perror_child(10, &data); // forse freeo troppo
+	data.argc = argc;
+	data.argv = argv;
+	i = dup_and_files(&data);
 	matrix_cmd(argc + i, argv + i, &data);
-	path_execve(argc - i, &data);
-	int j = 0;
+	data.path = malloc(sizeof(char *) * (argc - 2));
+	if (!data.path)
+		perror_child(15, &data);
+	path_execve(argc - i, &data, envp);
+	j = 0;
 	while (j < argc - i - 4)
 	{
 		ft_child(&data, j);
 		j++;
 	}
 	ft_parent(&data, j);
-	free_end(&data);
+	free_cmd_path(&data);
 }
