@@ -3,18 +3,29 @@
 /*                                                        :::      ::::::::   */
 /*   get_next_line_bonus.c                              :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mruggier <mruggier@student.42.fr>          +#+  +:+       +#+        */
+/*   By: marvin <marvin@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/10/26 16:45:12 by mruggier          #+#    #+#             */
-/*   Updated: 2024/01/05 17:04:27 by mruggier         ###   ########.fr       */
+/*   Updated: 2024/01/16 13:34:15 by marvin           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "get_next_line_bonus.h"
+#include "../pipex.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+int	ft_strcmp2(const char *str1, const char *str2)
+{
+	while (*str1 && *str1 == *str2)
+	{
+		str1++;
+		str2++;
+	}
+	return ((unsigned char)(*str1) - (unsigned char)(*str2));
+}
 
 char	*ft_read(char *newline, int fd)
 {
@@ -41,7 +52,7 @@ char	*ft_read(char *newline, int fd)
 	return (newline);
 }
 
-char	*get_next_line(int fd)
+char	*get_next_line(int fd, t_data *data)
 {
 	static char	*newline[4096];
 	char		*line;
@@ -52,6 +63,6 @@ char	*get_next_line(int fd)
 	if (!newline[fd])
 		return (NULL);
 	line = ft_correctline(newline[fd]);
-	newline[fd] = ft_resto(newline[fd]);
+	newline[fd] = ft_resto(newline[fd], data);
 	return (line);
 }

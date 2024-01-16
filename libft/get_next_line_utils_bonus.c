@@ -3,14 +3,14 @@
 /*                                                        :::      ::::::::   */
 /*   get_next_line_utils_bonus.c                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mruggier <mruggier@student.42.fr>          +#+  +:+       +#+        */
+/*   By: marvin <marvin@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/10/26 16:46:33 by mruggier          #+#    #+#             */
-/*   Updated: 2024/01/05 17:09:05 by mruggier         ###   ########.fr       */
+/*   Updated: 2024/01/16 13:34:06 by marvin           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <stdlib.h>
+#include "get_next_line_bonus.h"
 
 size_t	ft_strlen_line(char *str)
 {
@@ -99,11 +99,10 @@ char	*ft_correctline(char *newline)
 	return (line);
 }
 
-char	*ft_resto(char *newline)
+char	*ft_resto(char *newline, t_data *data)
 {
 	int		i;
 	int		j;
-	char	*returnline;
 
 	i = 0;
 	while (newline[i] && newline[i] != '\n')
@@ -113,14 +112,14 @@ char	*ft_resto(char *newline)
 		free(newline);
 		return (NULL);
 	}
-	returnline = malloc(sizeof(char) * (ft_strlen_line(newline) - i + 1));
-	if (!returnline)
+	data->returnline = malloc(sizeof(char) * (ft_strlen_line(newline) - i + 1));
+	if (!data->returnline)
 		return (0);
 	i++;
 	j = 0;
 	while (newline[i])
-		returnline[j++] = newline[i++];
-	returnline[j] = '\0';
+		data->returnline[j++] = newline[i++];
+	data->returnline[j] = '\0';
 	free(newline);
-	return (returnline);
+	return (data->returnline);
 }
